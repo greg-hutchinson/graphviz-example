@@ -1,0 +1,1451 @@
+{
+	"name": "3c67d367-8329-4109-89a2-eaf4d4da388a",
+	"id": "/providers/Microsoft.Flow/flows/3c67d367-8329-4109-89a2-eaf4d4da388a",
+	"type": "Microsoft.Flow/flows",
+	"properties": {
+		"apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+		"displayName": "TEMPLATE-Send_for_Approval",
+		"definition": {
+			"metadata": {
+				"workflowEntityId": null,
+				"creator": {
+					"id": "07b8a1de-3883-4bd4-9bd4-f45b6e25877f",
+					"type": "User",
+					"tenantId": "b1b05ab2-8e59-4f35-8b83-76d9a026391c"
+				},
+				"provisioningMethod": "FromDefinition",
+				"failureAlertSubscription": true,
+				"clientLastModifiedTime": "2019-12-11T22:36:56.6244142Z"
+			},
+			"$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+			"contentVersion": "1.0.0.0",
+			"parameters": {
+				"$connections": {
+					"defaultValue": {},
+					"type": "Object"
+				},
+				"$authentication": {
+					"defaultValue": {},
+					"type": "SecureObject"
+				}
+			},
+			"triggers": {
+				"manual": {
+					"splitOn": "@triggerBody()['rows']",
+					"type": "Request",
+					"kind": "ApiConnection",
+					"inputs": {
+						"schema": {
+							"type": "object",
+							"properties": {
+								"rows": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"approver": {
+												"title": "Approver",
+												"type": "string",
+												"format": "email",
+												"x-ms-dynamically-added": true,
+												"description": "Provide extra approver(s) if needed (optional)",
+												"x-ms-content-hint": "EMAIL"
+											},
+											"comments": {
+												"title": "Comments",
+												"type": "string",
+												"x-ms-dynamically-added": true,
+												"description": "Enter comments for your request",
+												"x-ms-content-hint": "TEXT"
+											}
+										},
+										"required": []
+									}
+								}
+							},
+							"required": []
+						},
+						"host": {
+							"connection": {
+								"name": "@parameters('$connections')['shared_sharepointonline']['connectionId']"
+							},
+							"api": {
+								"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+							}
+						},
+						"operationId": "ForASelectedFileHybridTrigger",
+						"parameters": {
+							"dataset": "https://fccfac.sharepoint.com/sites/JoshTestPlan",
+							"table": "8122e3cc-2d4a-4b7f-a882-0d623404d757"
+						},
+						"headersSchema": {
+							"x-ms-user-email-encoded": {
+								"title": "User email",
+								"type": "string",
+								"format": "byte",
+								"x-ms-dynamically-added": false
+							}
+						}
+					}
+				}
+			},
+			"actions": {
+				"Get_file_properties_-_Selected_file": {
+					"runAfter": {
+						"Compose_-_Isolate_ApprovalConfiguration": [
+							"Succeeded"
+						]
+					},
+					"metadata": {
+						"flowSystemMetadata": {
+							"swaggerOperationId": "GetFileItem"
+						}
+					},
+					"type": "ApiConnection",
+					"inputs": {
+						"host": {
+							"connection": {
+								"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+							},
+							"api": {
+								"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+							}
+						},
+						"method": "get",
+						"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/JoshTestPlan'))}/tables/@{encodeURIComponent(encodeURIComponent('8122e3cc-2d4a-4b7f-a882-0d623404d757'))}/items/@{encodeURIComponent(triggerBody()?['entity']?['ID'])}/getfileitem",
+						"authentication": {
+							"type": "Raw",
+							"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+						}
+					}
+				},
+				"Initialize_variable_-_ResponseReceived": {
+					"runAfter": {
+						"Initialize_variable_-_NewLineString": [
+							"Succeeded"
+						]
+					},
+					"type": "InitializeVariable",
+					"inputs": {
+						"variables": [
+							{
+								"name": "ResponseReceived",
+								"type": "Boolean",
+								"value": false
+							}
+						]
+					}
+				},
+				"Initialize_variable_-_ApproverEmails": {
+					"runAfter": {
+						"Initialize_variable_-_ResponseReceived": [
+							"Succeeded"
+						]
+					},
+					"type": "InitializeVariable",
+					"inputs": {
+						"variables": [
+							{
+								"name": "ApproverEmails",
+								"type": "String"
+							}
+						]
+					}
+				},
+				"Compose_-_LibraryName": {
+					"runAfter": {
+						"Get_file_properties_-_Selected_file": [
+							"Succeeded"
+						]
+					},
+					"type": "Compose",
+					"inputs": {
+						"LibraryName": "@first(split(body('Get_file_properties_-_Selected_file')?['{Path}'],'/'))"
+					}
+				},
+				"Initialize_variable_-_ResponseApplied": {
+					"runAfter": {
+						"Initialize_variable_-_ApproverEmails": [
+							"Succeeded"
+						]
+					},
+					"type": "InitializeVariable",
+					"inputs": {
+						"variables": [
+							{
+								"name": "ResponseApplied",
+								"type": "Boolean",
+								"value": false
+							}
+						]
+					}
+				},
+				"Condition_-_Approver_email_provided": {
+					"actions": {
+						"Append_to_string_variable_-_Provided_Approver": {
+							"runAfter": {},
+							"type": "AppendToStringVariable",
+							"inputs": {
+								"name": "ApproverEmails",
+								"value": "@{triggerBody()?['approver']};"
+							}
+						}
+					},
+					"runAfter": {
+						"Initialize_variable_-_ResponseApplied": [
+							"Succeeded"
+						]
+					},
+					"expression": {
+						"equals": [
+							"@empty(triggerBody()?['approver'])",
+							false
+						]
+					},
+					"type": "If"
+				},
+				"Get_items_-_ApprovalConfiguration_for_this_Library": {
+					"runAfter": {
+						"Compose_-_ListGUID": [
+							"Succeeded"
+						]
+					},
+					"metadata": {
+						"flowSystemMetadata": {
+							"swaggerOperationId": "GetItems"
+						}
+					},
+					"type": "ApiConnection",
+					"inputs": {
+						"host": {
+							"connection": {
+								"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+							},
+							"api": {
+								"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+							}
+						},
+						"method": "get",
+						"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/AutomationPortal'))}/tables/@{encodeURIComponent(encodeURIComponent('30ca18a8-1632-4181-9212-6285ca110433'))}/items",
+						"queries": {
+							"$filter": "ListGUID eq '@{outputs('Compose_-_ListGUID')?['ListGUID']}'"
+						},
+						"authentication": {
+							"type": "Raw",
+							"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+						}
+					}
+				},
+				"Compose_-_Isolate_ApprovalConfiguration": {
+					"runAfter": {
+						"Get_items_-_ApprovalConfiguration_for_this_Library": [
+							"Succeeded"
+						]
+					},
+					"type": "Compose",
+					"inputs": "@first(body('Get_items_-_ApprovalConfiguration_for_this_Library')?['value'])"
+				},
+				"Condition_-_ApproverEmails_is_not_empty": {
+					"actions": {
+						"Do_until_-_File_marked_as_Pending_or_approval_response_received": {
+							"actions": {
+								"Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)": {
+									"runAfter": {},
+									"metadata": {
+										"flowSystemMetadata": {
+											"swaggerOperationId": "HttpRequest"
+										}
+									},
+									"type": "ApiConnection",
+									"inputs": {
+										"host": {
+											"connection": {
+												"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+											},
+											"api": {
+												"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+											}
+										},
+										"method": "post",
+										"body": {
+											"method": "GET",
+											"uri": "_api/web/GetFileByServerRelativeUrl('@{outputs('Compose_-_Various')?['ServerRelativeUrl']}')/LockedByUser"
+										},
+										"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/httprequest",
+										"authentication": {
+											"type": "Raw",
+											"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+										}
+									}
+								},
+								"Condition_-_Document_is_not_locked_(Pending)": {
+									"actions": {
+										"Update_file_properties_-_Set_ApprovalStatus_to_Pending": {
+											"runAfter": {},
+											"metadata": {
+												"flowSystemMetadata": {
+													"swaggerOperationId": "PatchFileItem"
+												}
+											},
+											"type": "ApiConnection",
+											"inputs": {
+												"host": {
+													"connection": {
+														"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+													},
+													"api": {
+														"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+													}
+												},
+												"method": "patch",
+												"body": {
+													"ApprovalStatus": {
+														"Value": "Pending"
+													},
+													"ApprovalRequestedBy": {
+														"Claims": "@{outputs('Compose_-_Various')?['triggeringUser']}"
+													},
+													"ApprovalRequestedOn": "@{outputs('Compose_-_Capture_requestUTCNow')?['requestUTCNow']}",
+													"ApprovalRequestComments": "@triggerBody()?['comments']"
+												},
+												"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/JoshTestPlan'))}/tables/@{encodeURIComponent(encodeURIComponent('8122e3cc-2d4a-4b7f-a882-0d623404d757'))}/items/@{encodeURIComponent(body('Get_file_properties_-_Selected_file')?['ID'])}/patchfileitem",
+												"authentication": {
+													"type": "Raw",
+													"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+												}
+											}
+										}
+									},
+									"runAfter": {
+										"Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)": [
+											"Succeeded"
+										]
+									},
+									"else": {
+										"actions": {
+											"Delay_-_Wait_progressively_longer_before_retry_of_Pending_update": {
+												"runAfter": {},
+												"type": "Wait",
+												"inputs": {
+													"interval": {
+														"count": "@add(1,mul(4,mul(iterationIndexes('Do_until_-_File_marked_as_Pending_or_approval_response_received'),iterationIndexes('Do_until_-_File_marked_as_Pending_or_approval_response_received'))))",
+														"unit": "Second"
+													}
+												}
+											},
+											"Condition_-_Warn_threshold_for_lock_(Pending)": {
+												"actions": {
+													"Send_an_email_(V2)_-_Warn_requester_of_lock_(Pending)": {
+														"runAfter": {},
+														"metadata": {
+															"flowSystemMetadata": {
+																"swaggerOperationId": "SendEmailV2"
+															}
+														},
+														"type": "ApiConnection",
+														"inputs": {
+															"host": {
+																"connection": {
+																	"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+																},
+																"api": {
+																	"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+																}
+															},
+															"method": "post",
+															"body": {
+																"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+																"Subject": "\"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" could not be marked as Pending",
+																"Body": "<p>Due to a file lock by \"@{body('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)')?['d']?['UserPrincipalName']}\", \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has not yet been updated to reflect your pending approval request.</p>",
+																"Importance": "Normal"
+															},
+															"path": "/v2/Mail",
+															"authentication": {
+																"type": "Raw",
+																"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+															}
+														}
+													}
+												},
+												"runAfter": {
+													"Delay_-_Wait_progressively_longer_before_retry_of_Pending_update": [
+														"Succeeded"
+													]
+												},
+												"expression": {
+													"equals": [
+														"@iterationIndexes('Do_until_-_File_marked_as_Pending_or_approval_response_received')",
+														5
+													]
+												},
+												"type": "If"
+											}
+										}
+									},
+									"expression": {
+										"and": [
+											{
+												"equals": [
+													"@outputs('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)')?['statusCode']",
+													200
+												]
+											},
+											{
+												"equals": [
+													"@empty(body('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)')?['d']?['userPrincipalName'])",
+													true
+												]
+											}
+										]
+									},
+									"type": "If"
+								}
+							},
+							"runAfter": {
+								"Compose_-_Capture_requestUTCNow": [
+									"Succeeded"
+								]
+							},
+							"expression": "@or(equals(outputs('Update_file_properties_-_Set_ApprovalStatus_to_Pending')?['statusCode'],200),equals(variables('ResponseReceived'),true))",
+							"limit": {
+								"count": 16,
+								"timeout": "PT2H"
+							},
+							"type": "Until"
+						},
+						"Compose_-_Create_View_link": {
+							"runAfter": {
+								"Compose_-_Capture_requestUTCNow": [
+									"Succeeded"
+								]
+							},
+							"type": "Compose",
+							"inputs": "https://fccfac.sharepoint.com/:x:/r/sites/@{outputs('Compose_-_SiteName')?['SiteName']}/_layouts/15/Doc.aspx?sourcedoc={@{body('Send_an_HTTP_request_to_SharePoint_-_GetItemMetadata')?['File']?['UniqueId']}}&action=view"
+						},
+						"Start_and_wait_for_an_approval_-_Selected_file": {
+							"runAfter": {
+								"Compose_-_Requester_Comments_block": [
+									"Succeeded"
+								]
+							},
+							"metadata": {
+								"flowSystemMetadata": {
+									"swaggerOperationId": "StartAndWaitForAnApproval"
+								}
+							},
+							"type": "ApiConnectionWebhook",
+							"inputs": {
+								"host": {
+									"connection": {
+										"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_approvals']['connectionId']"
+									},
+									"api": {
+										"runtimeUrl": "https://flow-apim-msmanaged-na-centralus-01.azure-apim.net/apim/approvals"
+									}
+								},
+								"body": {
+									"notificationUrl": "@{listCallbackUrl()}",
+									"title": "@{outputs('Compose_-_Various')?['approvalTitle']}",
+									"assignedTo": "@variables('ApproverEmails')",
+									"details": "@{outputs('Compose_-_Requester_Comments_block')}\n@{variables('NewLineString')}\nPlease ensure you do not have the document open when submitting an Approval or Rejection.\n@{variables('NewLineString')}@{variables('NewLineString')}\n.",
+									"itemLink": "@{outputs('Compose_-_Create_View_link')}",
+									"itemLinkDescription": "@body('Get_file_properties_-_Selected_file')?['{Name}']",
+									"enableNotifications": true,
+									"enableReassignment": true
+								},
+								"path": "/types/@{encodeURIComponent('Basic')}/subscriptions",
+								"authentication": {
+									"type": "Raw",
+									"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+								}
+							}
+						},
+						"Set_variable_-_Set_ResponseReceived_to_True": {
+							"runAfter": {
+								"Send_an_email_(V2)_-_Approval_failed_or_timed_out": [
+									"Skipped"
+								]
+							},
+							"type": "SetVariable",
+							"inputs": {
+								"name": "ResponseReceived",
+								"value": true
+							}
+						},
+						"Condition_-_Approval_response_is_Approved": {
+							"actions": {
+								"Do_until_-_File_marked_as_Approved": {
+									"actions": {
+										"Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Approved)": {
+											"runAfter": {},
+											"metadata": {
+												"flowSystemMetadata": {
+													"swaggerOperationId": "HttpRequest"
+												}
+											},
+											"type": "ApiConnection",
+											"inputs": {
+												"host": {
+													"connection": {
+														"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+													},
+													"api": {
+														"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+													}
+												},
+												"method": "post",
+												"body": {
+													"method": "GET",
+													"uri": "_api/web/GetFileByServerRelativeUrl('@{outputs('Compose_-_Various')?['serverRelativeUrl']}')/LockedByUser"
+												},
+												"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/httprequest",
+												"authentication": {
+													"type": "Raw",
+													"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+												}
+											}
+										},
+										"Condition_-_Document_is_not_locked_(Approved)": {
+											"actions": {
+												"Update_file_properties_-_Set_ApprovalStatus_to_Approved": {
+													"runAfter": {},
+													"metadata": {
+														"flowSystemMetadata": {
+															"swaggerOperationId": "PatchFileItem"
+														}
+													},
+													"type": "ApiConnection",
+													"inputs": {
+														"host": {
+															"connection": {
+																"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+															},
+															"api": {
+																"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+															}
+														},
+														"method": "patch",
+														"body": {
+															"ApprovalStatus": {
+																"Value": "Approved"
+															},
+															"ApprovalRequestedBy": {
+																"Claims": "@{outputs('Compose_-_Various')?['triggeringUser']}"
+															},
+															"ApprovalRequestedOn": "@{outputs('Compose_-_Capture_requestUTCNow')?['requestUTCNow']}",
+															"ApprovedBy": {
+																"Claims": "@{outputs('Compose_-_Isolate_first_response')?['responder']?['userPrincipalName']}"
+															},
+															"ApprovedOn": "@{outputs('Compose_-_Isolate_first_response')?['responseDate']}",
+															"ApprovalComments": "@{outputs('Compose_-_Isolate_first_response')?['comments']}",
+															"ApprovalRequestComments": "@triggerBody()?['comments']"
+														},
+														"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/JoshTestPlan'))}/tables/@{encodeURIComponent(encodeURIComponent('8122e3cc-2d4a-4b7f-a882-0d623404d757'))}/items/@{encodeURIComponent(body('Get_file_properties_-_Selected_file')?['ID'])}/patchfileitem",
+														"authentication": {
+															"type": "Raw",
+															"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+														}
+													}
+												},
+												"Set_variable_-_ResponseApplied_(Approved)": {
+													"runAfter": {
+														"Update_file_properties_-_Set_ApprovalStatus_to_Approved": [
+															"Succeeded"
+														]
+													},
+													"type": "SetVariable",
+													"inputs": {
+														"name": "ResponseApplied",
+														"value": true
+													}
+												}
+											},
+											"runAfter": {
+												"Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Approved)": [
+													"Succeeded"
+												]
+											},
+											"else": {
+												"actions": {
+													"Delay_-_Wait_progressively_longer_before_retry_of_Approved_update": {
+														"runAfter": {},
+														"type": "Wait",
+														"inputs": {
+															"interval": {
+																"count": "@add(1,mul(iterationIndexes('Do_until_-_File_marked_as_Approved'),iterationIndexes('Do_until_-_File_marked_as_Approved')))",
+																"unit": "Minute"
+															}
+														}
+													},
+													"Condition_-_Warn_threshold_for_lock_(Approved)": {
+														"actions": {
+															"Send_an_email_(V2)_-_Warn_requester_and_responder_of_lock_(Approved)": {
+																"runAfter": {},
+																"metadata": {
+																	"flowSystemMetadata": {
+																		"swaggerOperationId": "SendEmailV2"
+																	}
+																},
+																"type": "ApiConnection",
+																"inputs": {
+																	"host": {
+																		"connection": {
+																			"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+																		},
+																		"api": {
+																			"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+																		}
+																	},
+																	"method": "post",
+																	"body": {
+																		"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+																		"Subject": "Cannot apply approval to  \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\"",
+																		"Body": "<p>\"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has been approved, however a file lock by \"@{body('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)')?['d']?['UserPrincipalName']}\" is preventing it from being updated.</p>",
+																		"Cc": "@{outputs('Compose_-_Isolate_first_response')?['responder']?['email']}",
+																		"Importance": "Normal"
+																	},
+																	"path": "/v2/Mail",
+																	"authentication": {
+																		"type": "Raw",
+																		"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+																	}
+																}
+															}
+														},
+														"runAfter": {
+															"Delay_-_Wait_progressively_longer_before_retry_of_Approved_update": [
+																"Succeeded"
+															]
+														},
+														"expression": {
+															"equals": [
+																"@iterationIndexes('Do_until_-_File_marked_as_Approved')",
+																3
+															]
+														},
+														"type": "If"
+													}
+												}
+											},
+											"expression": {
+												"and": [
+													{
+														"equals": [
+															"@outputs('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Approved)')?['statusCode']",
+															200
+														]
+													},
+													{
+														"equals": [
+															"@empty(body('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Approved)')?['d']?['userPrincipalName'])",
+															true
+														]
+													}
+												]
+											},
+											"type": "If"
+										}
+									},
+									"runAfter": {},
+									"expression": "@equals(outputs('Update_file_properties_-_Set_ApprovalStatus_to_Approved')?['statusCode'], 200)",
+									"limit": {
+										"count": 9,
+										"timeout": "PT3H"
+									},
+									"type": "Until"
+								},
+								"Condition_-_Approval_successfully_applied": {
+									"actions": {
+										"Condition_-_Consider_ApplyRetentionLabel_config": {
+											"actions": {
+												"Send_an_HTTP_request_to_SharePoint_-_Apply_Record_label_to_File": {
+													"runAfter": {},
+													"metadata": {
+														"flowSystemMetadata": {
+															"swaggerOperationId": "HttpRequest"
+														}
+													},
+													"type": "ApiConnection",
+													"inputs": {
+														"host": {
+															"connection": {
+																"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+															},
+															"api": {
+																"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+															}
+														},
+														"method": "post",
+														"body": {
+															"method": "POST",
+															"uri": "_api/web/lists('@{outputs('Compose_-_ListGUID')?['ListGUID']}')/items(@{body('Get_file_properties_-_Selected_file')?['ID']})/SetComplianceTag()",
+															"headers": {
+																"Accept": "application/json;odata=nometadata",
+																"Content-Type": "application/json;odata=nometadata"
+															},
+															"body": "{\n \"complianceTag\":\"@{outputs('Compose_-_Isolate_ApprovalConfiguration')?['RetentionLabelTag']}\",\n \"isTagPolicyHold\":true,\n \"isTagPolicyRecord\":true,\n \"isEventBasedTag\":false,\n \"isTagSuperLock\":false\n}"
+														},
+														"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/httprequest",
+														"authentication": {
+															"type": "Raw",
+															"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+														}
+													}
+												}
+											},
+											"runAfter": {},
+											"expression": {
+												"equals": [
+													"@outputs('Compose_-_Isolate_ApprovalConfiguration')?['ApplyRetentionLabel']",
+													true
+												]
+											},
+											"type": "If"
+										},
+										"Condition_-_Consider_MakeACopy_config": {
+											"actions": {
+												"Compose_-_NameForCopy": {
+													"runAfter": {},
+													"type": "Compose",
+													"inputs": {
+														"NameForCopy": "@{formatDateTime(utcNow(),'yyyy-MM-dd')} - Copy of @{body('Get_file_properties_-_Selected_file')?['{FilenameWithExtension}']}"
+													}
+												},
+												"Get_file_content_-_Selected_file": {
+													"runAfter": {
+														"Compose_-_NameForCopy": [
+															"Succeeded"
+														]
+													},
+													"metadata": {
+														"flowSystemMetadata": {
+															"swaggerOperationId": "GetFileContent"
+														}
+													},
+													"type": "ApiConnection",
+													"inputs": {
+														"host": {
+															"connection": {
+																"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+															},
+															"api": {
+																"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+															}
+														},
+														"method": "get",
+														"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/files/@{encodeURIComponent(body('Get_file_properties_-_Selected_file')?['{Identifier}'])}/content",
+														"queries": {
+															"inferContentType": false
+														},
+														"authentication": {
+															"type": "Raw",
+															"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+														}
+													}
+												},
+												"Create_file_-_Copy_of_file": {
+													"runAfter": {
+														"Get_file_content_-_Selected_file": [
+															"Succeeded"
+														]
+													},
+													"metadata": {
+														"flowSystemMetadata": {
+															"swaggerOperationId": "CreateFile"
+														}
+													},
+													"type": "ApiConnection",
+													"inputs": {
+														"host": {
+															"connection": {
+																"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+															},
+															"api": {
+																"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+															}
+														},
+														"method": "post",
+														"body": "@body('Get_file_content_-_Selected_file')",
+														"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/files",
+														"queries": {
+															"folderPath": "@body('Get_file_properties_-_Selected_file')?['{Path}']",
+															"name": "@{outputs('Compose_-_NameForCopy')?['NameForCopy']}",
+															"queryParametersSingleEncoded": true
+														},
+														"authentication": {
+															"type": "Raw",
+															"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+														}
+													}
+												},
+												"Send_an_HTTP_request_to_SharePoint_-_Clear_Metadata_on_copy": {
+													"runAfter": {
+														"Create_file_-_Copy_of_file": [
+															"Succeeded"
+														]
+													},
+													"metadata": {
+														"flowSystemMetadata": {
+															"swaggerOperationId": "HttpRequest"
+														}
+													},
+													"type": "ApiConnection",
+													"inputs": {
+														"host": {
+															"connection": {
+																"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+															},
+															"api": {
+																"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+															}
+														},
+														"method": "post",
+														"body": {
+															"method": "PATCH",
+															"uri": "_api/Web/lists('@{outputs('Compose_-_ListGUID')?['ListGUID']}')/items('@{body('Create_file_-_Copy_of_file')?['ItemId']}')",
+															"headers": {
+																"Accept": "application/json;odata=verbose",
+																"Content-Type": "application/json;odata=verbose",
+																"If-Match": "*"
+															},
+															"body": "{\n\"__metadata\":{\"type\":\"@{body('Send_an_HTTP_request_to_SharePoint_-_GetItemMetadata')?['odata.type']}\"},\n\"ApprovalComments\": null,\n\"ApprovalRequestedById\": -1,\n\"ApprovalRequestedByStringId\":\"\",\n\"ApprovalRequestedOn\": null,\n\"ApprovalStatus\": null,\n\"ApprovedById\": -1,\n\"ApprovedByStringId\": \"\",\n\"ApprovedOn\": null,\n\"RejectedById\": -1,\n\"RejectedByStringId\":\"\",\n\"RejectedOn\": null,\n\"RejectionReason\": null\n}"
+														},
+														"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/httprequest",
+														"authentication": {
+															"type": "Raw",
+															"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+														}
+													}
+												}
+											},
+											"runAfter": {
+												"Condition_-_Consider_ApplyRetentionLabel_config": [
+													"Succeeded"
+												]
+											},
+											"expression": {
+												"equals": [
+													"@outputs('Compose_-_Isolate_ApprovalConfiguration')?['MakeACopy']",
+													true
+												]
+											},
+											"type": "If"
+										}
+									},
+									"runAfter": {
+										"Do_until_-_File_marked_as_Approved": [
+											"Succeeded"
+										]
+									},
+									"else": {
+										"actions": {
+											"Send_an_email_(V2)_-_Alert_of_Approved_general_failure": {
+												"runAfter": {},
+												"metadata": {
+													"flowSystemMetadata": {
+														"swaggerOperationId": "SendEmailV2"
+													}
+												},
+												"type": "ApiConnection",
+												"inputs": {
+													"host": {
+														"connection": {
+															"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+														},
+														"api": {
+															"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+														}
+													},
+													"method": "post",
+													"body": {
+														"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+														"Subject": "Approval of \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has failed",
+														"Body": "<p>\"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has been approved, however the automated process was not able to apply the related details of that approval to the file. Please submit a new approval request.</p>",
+														"Importance": "Normal"
+													},
+													"path": "/v2/Mail",
+													"authentication": {
+														"type": "Raw",
+														"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+													}
+												}
+											},
+											"Terminate_-_General_approval_failure": {
+												"runAfter": {
+													"Send_an_email_(V2)_-_Alert_of_Approved_general_failure": [
+														"Succeeded"
+													]
+												},
+												"type": "Terminate",
+												"inputs": {
+													"runStatus": "Failed",
+													"runError": {
+														"message": "General approval failure"
+													}
+												}
+											}
+										}
+									},
+									"expression": {
+										"equals": [
+											"@variables('ResponseApplied')",
+											true
+										]
+									},
+									"type": "If"
+								}
+							},
+							"runAfter": {
+								"Compose_-_Isolate_first_response": [
+									"Succeeded"
+								]
+							},
+							"else": {
+								"actions": {
+									"Do_until_-_File_marked_as_Rejected": {
+										"actions": {
+											"Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Rejected)": {
+												"runAfter": {},
+												"metadata": {
+													"flowSystemMetadata": {
+														"swaggerOperationId": "HttpRequest"
+													}
+												},
+												"type": "ApiConnection",
+												"inputs": {
+													"host": {
+														"connection": {
+															"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+														},
+														"api": {
+															"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+														}
+													},
+													"method": "post",
+													"body": {
+														"method": "GET",
+														"uri": "_api/web/GetFileByServerRelativeUrl('@{outputs('Compose_-_Various')?['serverRelativeUrl']}')/LockedByUser"
+													},
+													"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/httprequest",
+													"authentication": {
+														"type": "Raw",
+														"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+													}
+												}
+											},
+											"Condition_-_Document_is_not_locked_(Rejected)": {
+												"actions": {
+													"Update_file_properties_-_Set_ApprovalStatus_to_Rejected": {
+														"runAfter": {},
+														"metadata": {
+															"flowSystemMetadata": {
+																"swaggerOperationId": "PatchFileItem"
+															}
+														},
+														"type": "ApiConnection",
+														"inputs": {
+															"host": {
+																"connection": {
+																	"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+																},
+																"api": {
+																	"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+																}
+															},
+															"method": "patch",
+															"body": {
+																"ApprovalStatus": {
+																	"Value": "Rejected"
+																},
+																"ApprovalRequestedBy": {
+																	"Claims": "@{outputs('Compose_-_Various')?['triggeringUser']}"
+																},
+																"ApprovalRequestedOn": "@{outputs('Compose_-_Capture_requestUTCNow')?['requestUTCNow']}",
+																"RejectedBy": {
+																	"Claims": "@{outputs('Compose_-_Isolate_first_response')?['responder']?['userPrincipalName']}"
+																},
+																"RejectedOn": "@{outputs('Compose_-_Isolate_first_response')?['responseDate']}",
+																"RejectionReason": "@{outputs('Compose_-_Isolate_first_response')?['comments']}",
+																"ApprovalRequestComments": "@triggerBody()?['comments']"
+															},
+															"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/JoshTestPlan'))}/tables/@{encodeURIComponent(encodeURIComponent('8122e3cc-2d4a-4b7f-a882-0d623404d757'))}/items/@{encodeURIComponent(body('Get_file_properties_-_Selected_file')?['ID'])}/patchfileitem",
+															"authentication": {
+																"type": "Raw",
+																"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+															}
+														}
+													},
+													"Set_variable_-_ResponseApplied_(Rejected)": {
+														"runAfter": {
+															"Update_file_properties_-_Set_ApprovalStatus_to_Rejected": [
+																"Succeeded"
+															]
+														},
+														"type": "SetVariable",
+														"inputs": {
+															"name": "ResponseApplied",
+															"value": true
+														}
+													}
+												},
+												"runAfter": {
+													"Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Rejected)": [
+														"Succeeded"
+													]
+												},
+												"else": {
+													"actions": {
+														"Delay_-_Wait_progressively_longer_before_retry_of_Rejected_update": {
+															"runAfter": {},
+															"type": "Wait",
+															"inputs": {
+																"interval": {
+																	"count": "@add(1,mul(iterationIndexes('Do_until_-_File_marked_as_Rejected'), iterationIndexes('Do_until_-_File_marked_as_Rejected')))",
+																	"unit": "Minute"
+																}
+															}
+														},
+														"Condition_-_Warn_threshold_for_lock_(Rejected)": {
+															"actions": {
+																"Send_an_email_(V2)_-_Warn_requester_and_responder_of_lock_(Rejected)": {
+																	"runAfter": {},
+																	"metadata": {
+																		"flowSystemMetadata": {
+																			"swaggerOperationId": "SendEmailV2"
+																		}
+																	},
+																	"type": "ApiConnection",
+																	"inputs": {
+																		"host": {
+																			"connection": {
+																				"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+																			},
+																			"api": {
+																				"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+																			}
+																		},
+																		"method": "post",
+																		"body": {
+																			"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+																			"Subject": "Cannot apply rejection to  \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\"",
+																			"Body": "<p>\"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has been rejected, however a file lock by \"@{body('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Pending)')?['d']?['UserPrincipalName']}\" is preventing it from being updated.</p>",
+																			"Cc": "@{outputs('Compose_-_Isolate_first_response')?['responder']?['email']}",
+																			"Importance": "Normal"
+																		},
+																		"path": "/v2/Mail",
+																		"authentication": {
+																			"type": "Raw",
+																			"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+																		}
+																	}
+																}
+															},
+															"runAfter": {
+																"Delay_-_Wait_progressively_longer_before_retry_of_Rejected_update": [
+																	"Succeeded"
+																]
+															},
+															"expression": {
+																"equals": [
+																	"@iterationIndexes('Do_until_-_File_marked_as_Rejected')",
+																	3
+																]
+															},
+															"type": "If"
+														}
+													}
+												},
+												"expression": {
+													"and": [
+														{
+															"equals": [
+																"@outputs('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Rejected)')['statusCode']",
+																200
+															]
+														},
+														{
+															"equals": [
+																"@empty(body('Send_an_HTTP_request_to_SharePoint_-_Get_locked_status_(Rejected)')?['d']?['userPrincipalName'])",
+																true
+															]
+														}
+													]
+												},
+												"type": "If"
+											}
+										},
+										"runAfter": {},
+										"expression": "@equals(outputs('Update_file_properties_-_Set_ApprovalStatus_to_Rejected')?['statusCode'], 200)",
+										"limit": {
+											"count": 9,
+											"timeout": "PT3H"
+										},
+										"type": "Until"
+									},
+									"Condition_-_Rejection_successfully_applied": {
+										"actions": {},
+										"runAfter": {
+											"Do_until_-_File_marked_as_Rejected": [
+												"Succeeded"
+											]
+										},
+										"else": {
+											"actions": {
+												"Send_an_email_(V2)_-_Alert_of_Rejected_general_failure": {
+													"runAfter": {},
+													"metadata": {
+														"flowSystemMetadata": {
+															"swaggerOperationId": "SendEmailV2"
+														}
+													},
+													"type": "ApiConnection",
+													"inputs": {
+														"host": {
+															"connection": {
+																"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+															},
+															"api": {
+																"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+															}
+														},
+														"method": "post",
+														"body": {
+															"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+															"Subject": "Rejection of \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has failed",
+															"Body": "<p>\"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" has been rejected, however the automated process was not able to apply the related details of that rejection to the file. Please submit a new approval request.</p>",
+															"Importance": "Normal"
+														},
+														"path": "/v2/Mail",
+														"authentication": {
+															"type": "Raw",
+															"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+														}
+													}
+												},
+												"Terminate_-_General_rejection_failure": {
+													"runAfter": {
+														"Send_an_email_(V2)_-_Alert_of_Rejected_general_failure": [
+															"Succeeded"
+														]
+													},
+													"type": "Terminate",
+													"inputs": {
+														"runStatus": "Failed",
+														"runError": {
+															"message": "General rejection failure"
+														}
+													}
+												}
+											}
+										},
+										"expression": {
+											"equals": [
+												"@variables('ResponseApplied')",
+												true
+											]
+										},
+										"type": "If"
+									}
+								}
+							},
+							"expression": {
+								"equals": [
+									"@body('Start_and_wait_for_an_approval_-_Selected_file')?['outcome']",
+									"Approve"
+								]
+							},
+							"type": "If"
+						},
+						"Compose_-_Requester_Comments_block": {
+							"runAfter": {
+								"Compose_-_Create_View_link": [
+									"Succeeded"
+								]
+							},
+							"type": "Compose",
+							"inputs": "@if(not(empty(triggerBody()?['comments'])),concat('Comments from the requestor:\r\n','\"',triggerBody()?['comments'],'\"'),'')"
+						},
+						"Send_an_email_(V2)_-_Approval_failed_or_timed_out": {
+							"runAfter": {
+								"Start_and_wait_for_an_approval_-_Selected_file": [
+									"Failed",
+									"TimedOut"
+								]
+							},
+							"metadata": {
+								"flowSystemMetadata": {
+									"swaggerOperationId": "SendEmailV2"
+								}
+							},
+							"type": "ApiConnection",
+							"inputs": {
+								"host": {
+									"connection": {
+										"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+									},
+									"api": {
+										"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+									}
+								},
+								"method": "post",
+								"body": {
+									"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+									"Subject": "Approval request failed or timed out",
+									"Body": "<p>An Approval request for \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\", sent on @{formatDateTime(outputs('Compose_-_Capture_RequestUTCNow')?['requestUTCNow'],'yyyy-MM-dd')}, has failed or timed out. This may have occurred due to an invalid email address, or because 30 days have elapsed without a response.<br>\n<br>\nPlease review the state of the document in SharePoint to determine whether a new Approval request needs to be sent.</p>",
+									"Importance": "Normal"
+								},
+								"path": "/v2/Mail",
+								"authentication": {
+									"type": "Raw",
+									"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+								}
+							}
+						},
+						"Compose_-_Capture_requestUTCNow": {
+							"runAfter": {},
+							"type": "Compose",
+							"inputs": {
+								"requestUTCNow": "@utcNow()"
+							}
+						},
+						"Compose_-_Isolate_first_response": {
+							"runAfter": {
+								"Do_until_-_File_marked_as_Pending_or_approval_response_received": [
+									"Succeeded",
+									"Failed",
+									"Skipped",
+									"TimedOut"
+								],
+								"Set_variable_-_Set_ResponseReceived_to_True": [
+									"Succeeded"
+								]
+							},
+							"type": "Compose",
+							"inputs": "@first(body('Start_and_wait_for_an_approval_-_Selected_file')?['responses'])"
+						}
+					},
+					"runAfter": {
+						"Condition_-_Approvers_column_not_empty": [
+							"Succeeded"
+						]
+					},
+					"else": {
+						"actions": {
+							"Send_an_email_(V2)_-_No_Approver": {
+								"runAfter": {},
+								"metadata": {
+									"flowSystemMetadata": {
+										"swaggerOperationId": "SendEmailV2"
+									}
+								},
+								"type": "ApiConnection",
+								"inputs": {
+									"host": {
+										"connection": {
+											"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_office365_3']['connectionId']"
+										},
+										"api": {
+											"runtimeUrl": "https://flow-apim-msmanaged-na-eastus2-01.azure-apim.net/apim/office365"
+										}
+									},
+									"method": "post",
+									"body": {
+										"To": "@{outputs('Compose_-_Various')?['triggeringUser']}",
+										"Subject": "No approver specified for \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\" Approval request",
+										"Body": "<p>No Approval request has been sent for \"@{body('Get_file_properties_-_Selected_file')?['{Name}']}\", as no Approver was specified. Please ensure an Approver is selected or provided.</p>",
+										"Importance": "Normal"
+									},
+									"path": "/v2/Mail",
+									"authentication": {
+										"type": "Raw",
+										"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+									}
+								}
+							},
+							"Terminate_-_No_Approver_failure": {
+								"runAfter": {
+									"Send_an_email_(V2)_-_No_Approver": [
+										"Succeeded"
+									]
+								},
+								"type": "Terminate",
+								"inputs": {
+									"runStatus": "Failed",
+									"runError": {
+										"message": "No Approver provided"
+									}
+								}
+							}
+						}
+					},
+					"expression": {
+						"equals": [
+							"@empty(variables('ApproverEmails'))",
+							false
+						]
+					},
+					"type": "If"
+				},
+				"Send_an_HTTP_request_to_SharePoint_-_GetItemMetadata": {
+					"runAfter": {
+						"Compose_-_SiteName": [
+							"Succeeded"
+						]
+					},
+					"metadata": {
+						"flowSystemMetadata": {
+							"swaggerOperationId": "HttpRequest"
+						}
+					},
+					"type": "ApiConnection",
+					"inputs": {
+						"host": {
+							"connection": {
+								"name": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$connections']['shared_sharepointonline']['connectionId']"
+							},
+							"api": {
+								"runtimeUrl": "https://flow-apim-msmanaged-na-westus2-01.azure-apim.net/apim/sharepointonline"
+							}
+						},
+						"method": "post",
+						"body": {
+							"method": "GET",
+							"uri": "_api/web/lists('@{outputs('Compose_-_ListGUID')?['ListGUID']}')/items(@{body('Get_file_properties_-_Selected_file')?['ID']})/?$expand=file",
+							"headers": {
+								"Content-Type": "application/json;odata=verbose",
+								"Accept": "application/json;"
+							}
+						},
+						"path": "/datasets/@{encodeURIComponent(encodeURIComponent('https://fccfac.sharepoint.com/sites/',outputs('Compose_-_SiteName')?['SiteName']))}/httprequest",
+						"authentication": {
+							"type": "Raw",
+							"value": "@json(decodeBase64(triggerOutputs().headers['X-MS-APIM-Tokens']))['$ConnectionKey']"
+						}
+					}
+				},
+				"Initialize_variable_-_NewLineString": {
+					"runAfter": {
+						"Compose_-_Various": [
+							"Succeeded"
+						]
+					},
+					"type": "InitializeVariable",
+					"inputs": {
+						"variables": [
+							{
+								"name": "NewLineString",
+								"type": "String"
+							}
+						]
+					}
+				},
+				"Compose_-_Various": {
+					"runAfter": {
+						"Send_an_HTTP_request_to_SharePoint_-_GetItemMetadata": [
+							"Succeeded"
+						]
+					},
+					"type": "Compose",
+					"inputs": {
+						"approvalTitle": "Please approve '@{body('Get_file_properties_-_Selected_file')?['{Name}']}'",
+						"triggeringUser": "@trigger()?['outputs']?['headers']?['x-ms-user-email']",
+						"serverRelativeUrl": "@body('Send_an_HTTP_request_to_SharePoint_-_GetItemMetadata')?['File']?['ServerRelativeUrl']"
+					}
+				},
+				"Compose_-_SiteName": {
+					"runAfter": {
+						"Compose_-_LibraryName": [
+							"Succeeded"
+						]
+					},
+					"type": "Compose",
+					"inputs": {
+						"SiteName": "@substring(trigger().inputs?['parameters']?['dataset'],add(indexOf(trigger().inputs?['parameters']?['dataset'],'/sites/'),length('/sites/')),sub(length(trigger().inputs?['parameters']?['dataset']),add(indexOf(trigger().inputs?['parameters']?['dataset'],'/sites/'),length('/sites/'))))"
+					}
+				},
+				"Condition_-_Approvers_column_not_empty": {
+					"actions": {
+						"Select_-_ApproverEmails": {
+							"runAfter": {},
+							"type": "Select",
+							"inputs": {
+								"from": "@body('Get_file_properties_-_Selected_file')?['Approvers']",
+								"select": {
+									"email": "@item()?['Email']"
+								}
+							}
+						},
+						"Apply_to_each_-_Aggregate_ApproverEmails": {
+							"foreach": "@body('Select_-_ApproverEmails')",
+							"actions": {
+								"Append_to_string_variable_-_ApproverEmails": {
+									"runAfter": {},
+									"type": "AppendToStringVariable",
+									"inputs": {
+										"name": "ApproverEmails",
+										"value": "@{items('Apply_to_each_-_Aggregate_ApproverEmails')?['Email']};"
+									}
+								}
+							},
+							"runAfter": {
+								"Select_-_ApproverEmails": [
+									"Succeeded"
+								]
+							},
+							"type": "Foreach"
+						}
+					},
+					"runAfter": {
+						"Condition_-_Approver_email_provided": [
+							"Succeeded"
+						]
+					},
+					"expression": {
+						"equals": [
+							"@empty(body('Get_file_properties_-_Selected_file')?['Approvers'])",
+							false
+						]
+					},
+					"type": "If"
+				},
+				"DEBUG_-_Compose_-_Show_trigger": {
+					"runAfter": {},
+					"type": "Compose",
+					"inputs": "@trigger()"
+				},
+				"Compose_-_ListGUID": {
+					"runAfter": {
+						"DEBUG_-_Compose_-_Show_trigger": [
+							"Succeeded"
+						]
+					},
+					"type": "Compose",
+					"inputs": {
+						"ListGUID": "@trigger().inputs?['parameters']?['table']"
+					}
+				}
+			}
+		},
+		"connectionReferences": {
+			"shared_sharepointonline": {
+				"connectionName": "24829ea7e18c46f68faaff791328bd85",
+				"source": "Embedded",
+				"id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+				"tier": "NotSpecified"
+			},
+			"shared_office365_3": {
+				"connectionName": "e32975a80f77450583f6bcefb6051b31",
+				"source": "Embedded",
+				"id": "/providers/Microsoft.PowerApps/apis/shared_office365",
+				"tier": "NotSpecified"
+			},
+			"shared_approvals": {
+				"connectionName": "shared-approvals-be33270c-8ad5-44a6-983e-044dc4b369f0",
+				"source": "Invoker",
+				"id": "/providers/Microsoft.PowerApps/apis/shared_approvals",
+				"tier": "NotSpecified"
+			}
+		},
+		"flowFailureAlertSubscribed": false
+	}
+}
